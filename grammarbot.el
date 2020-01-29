@@ -102,7 +102,9 @@ LANG, language of the TEXT, by default `grammarbot-language' is used."
 
 (defvar grammarbot-choices-buffer "*Grammarbot Choices*")
 (defvar grammarbot-choices-display-buffer-action
-  '((display-buffer-reuse-window display-buffer-in-side-window)))
+  '((display-buffer-reuse-window display-buffer-in-side-window)
+    (side . top) (window-height . fit-window-to-buffer)))
+
 (defvar grammarbot--overlay nil)
 
 ;; NOTE: `match-point' is cons in form (MARKER . MATCH)
@@ -115,6 +117,7 @@ LANG, language of the TEXT, by default `grammarbot-language' is used."
             (move-overlay grammarbot--overlay mstart mend (current-buffer))
 
           (setq grammarbot--overlay (make-overlay mstart mend))
+          (overlay-put grammarbot--overlay :grammarbot-match-point match-point)
           (overlay-put grammarbot--overlay 'priority 1001)
           (overlay-put grammarbot--overlay 'face grammarbot-highlight-face)))
 
@@ -140,20 +143,38 @@ LANG, language of the TEXT, by default `grammarbot-language' is used."
       (goto-char (point-min))
       (current-buffer))))
 
-(defun grammarbot--choices-display-buffer (choices-buffer)
-  "Display grammarbot choices buffer."
-  (when-let ((win (display-buffer
-                   choices-buffer grammarbot-choices-display-buffer-action)))
-    (fit-window-to-buffer win nil nil nil nil t)
-    ))
+(defun grammarbot--keys-as-rep-idx (keys)
+  "Convert KEYS to replacement index.
+Return digit or nil."
+  (let ((num-key (and (= (length keys) 1) (aref keys 0))))
+    (when (and (>= num-key ?0) (<= num-key ?9))
+      (- num-key ?0))))
 
 (defun grammarbot--issue-choose (match-point)
   "Show/hide replacements candidates for MATCH-POINT.
 Return selected replacement index."
   (if match-point
-      (progn
-      (with-current-buffer (get-buffer-create grammarbot-choices-buffer)
-        )
+      (let* ((nreps (length (plist-get (cdr match-point) :replacements)))
+             (read-prompt (concat (format "0%s to replace, "
+                                          (if (> nreps 1)
+                                              (format "-%d" nreps)
+                                            ""))
+                                  "SPC to leave unchanged, "
+                                  "C-g to cancel"))
+             (got-valid-keys nil) (ret-rep-idx nil))
+        (display-buffer (grammarbot--choices-buffer match-point)
+                        grammarbot-choices-display-buffer-action)
+
+        ;; Read key with replacement index
+        (while (not got-valid-keys)
+          (let ((key (read-key read-prompt)))
+            (cond ((when (and (>= key ?0) (<= key ?9)
+                              (< (- key ?0) nreps))
+                     (setq ret-rep-idx (- key ?0))
+                     (setq got-valid-keys t)))
+                  ((= key ?\C-g) (keyboard-quit))
+                  ((= key ?\s) (setq got-valid-keys t)))))
+        ret-rep-idx)
 
     (when (get-buffer grammarbot-choices-buffer)
       (kill-buffer grammarbot-choices-buffer))))
@@ -204,7 +225,9 @@ the first suggestion, i.e. grammarbot in batch mode."
                 (if arg
                     (grammarbot--issue-replace match-pnt 0)
                   (grammarbot--issue-interactively match-pnt))))
-          (grammarbot--issue-highlight nil))
+
+          (grammarbot--issue-highlight nil)
+          (grammarbot--issue-choose nil))
 
       (message "GrammarBot v%s detected no errors"
                (plist-get (plist-get result :software) :version)))))
