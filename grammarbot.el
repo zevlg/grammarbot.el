@@ -51,6 +51,18 @@ Without API Key there is a limit up to 100 requests per day."
   :type 'face
   :group 'grammarbot)
 
+(defcustom grammarbot-max-replacements 10
+  "Maximum number of replacements to show.
+10 at maximum."
+  :type 'integer
+  :group 'grammarbot)
+
+(defcustom grammarbot-accept-single-choice
+  '((:issueType "grammar" :category "GRAMMAR"))
+  "List of issues to automatically accept if issue of given type."
+  :type 'list
+  :group 'grammarbot)
+
 (defconst grammarbot-api-url "http://api.grammarbot.io/v2/check"
   "API URL to grammarbot service.")
 
@@ -88,14 +100,17 @@ LANG, language of the TEXT, by default `grammarbot-language' is used."
   (grammarbot--api-check
    text (or api-key grammarbot-api-key) (or lang grammarbot-language)))
 
-(defvar grammarbot--start 0)
+(defvar grammarbot-choices-buffer "*Grammarbot Choices*")
+(defvar grammarbot-choices-display-buffer-action
+  '((display-buffer-reuse-window display-buffer-in-side-window)))
 (defvar grammarbot--overlay nil)
 
-(defun grammarbot--issue-highlight (match)
+;; NOTE: `match-point' is cons in form (MARKER . MATCH)
+(defun grammarbot--issue-highlight (match-point)
   "Highlight text corresponding to issue MATCH."
-  (if match
-      (let* ((mstart (+ grammarbot--start (plist-get match :offset)))
-             (mend (+ mstart (plist-get match :length))))
+  (if match-point
+      (let* ((mstart (car match-point))
+             (mend (+ mstart (plist-get (cdr match-point) :length))))
         (if grammarbot--overlay
             (move-overlay grammarbot--overlay mstart mend (current-buffer))
 
@@ -106,25 +121,59 @@ LANG, language of the TEXT, by default `grammarbot-language' is used."
     (when grammarbot--overlay
       (delete-overlay grammarbot--overlay))))
 
-(defun grammarbot--issue-replace (match rep-idx)
-  "Replace text corresponding to MATCH with replacement."
-  (let* ((rep (plist-get (aref (plist-get match :replacements) rep-idx)
-                         :value))
-         (mstart (+ grammarbot--start (plist-get match :offset)))
-         (mend (+ mstart (plist-get match :length))))
+(defun grammarbot--choices-buffer (match-point)
+  "Create and fill choices buffer, return buffer."
+  (let ((match (cdr match-point)))
+    (with-current-buffer (get-buffer-create grammarbot-choices-buffer)
+      (erase-buffer)
+;      (insert (plist-get match :shortMessage) ": ")
+      (insert (plist-get match :message) "\n")
+      (let ((max-rlen (apply 'max (mapcar (lambda (rep)
+                                            (length (plist-get rep :value)))
+                                          (plist-get match :replacements))))
+            (rep-idx 0))
+        (seq-doseq (rep (plist-get match :replacements))
+          (insert "(" (propertize (number-to-string rep-idx) 'face 'bold) ")")
+          (insert " " (plist-get rep :value) " ")
+          (insert (make-string (- max-rlen (length (plist-get rep :value))) ?\s))
+          (cl-incf rep-idx)))
+      (goto-char (point-min))
+      (current-buffer))))
+
+(defun grammarbot--choices-display-buffer (choices-buffer)
+  "Display grammarbot choices buffer."
+  (when-let ((win (display-buffer
+                   choices-buffer grammarbot-choices-display-buffer-action)))
+    (fit-window-to-buffer win nil nil nil nil t)
+    ))
+
+(defun grammarbot--issue-choose (match-point)
+  "Show/hide replacements candidates for MATCH-POINT.
+Return selected replacement index."
+  (if match-point
+      (progn
+      (with-current-buffer (get-buffer-create grammarbot-choices-buffer)
+        )
+
+    (when (get-buffer grammarbot-choices-buffer)
+      (kill-buffer grammarbot-choices-buffer))))
+
+(defun grammarbot--issue-replace (match-point rep-idx)
+  "Replace text corresponding to MATCH-POINT with REP-IDX's replacement."
+  (let* ((match (cdr match-point))
+         (rep (plist-get (aref (plist-get match :replacements) rep-idx) :value)))
     (save-excursion
-      (goto-char mend)
+      (goto-char (car match-point))
       (insert rep)
-      (delete-region mstart mend))
+      (delete-char (plist-get match :length)))))
 
-    (cl-incf grammarbot--start (- (length rep) (- mend mstart)))))
+(defun grammarbot--issue-interactively (match-point)
+  "Interactively perform issue resolving for the MATCH-POINT."
+  (goto-char (car match-point))
+  (grammarbot--issue-highlight match-point)
 
-(defun grammarbot--issue-interactively (match)
-  "Interactively perform issue resolving for the MATCH."
-  (goto-char (+ grammarbot--start (plist-get match :offset)))
-  (grammarbot--issue-highlight match)
-  (read-key "Choose replacement: ")
-  (grammarbot--issue-replace match 0))
+  (when-let ((rep-idx (grammarbot--issue-choose match-point)))
+    (grammarbot--issue-replace match-point rep-idx)))
 
 ;;;###autoload
 (defun grammarbot (start end &optional arg)
@@ -142,15 +191,19 @@ the first suggestion, i.e. grammarbot in batch mode."
   (let* ((result (grammarbot--api-check
                   (buffer-substring-no-properties start end)
                   grammarbot-api-key grammarbot-language))
-         (matches (plist-get result :matches))
-         (grammarbot--start start))
-    (if (> (length matches) 0)
+         (match-points
+          (mapcar (lambda (match)
+                    (cons (copy-marker
+                           (+ start (plist-get match :offset)) t)
+                          match))
+                  (plist-get result :matches))))
+    (if match-points
         (unwind-protect
             (save-excursion
-              (seq-doseq (match matches)
+              (seq-doseq (match-pnt match-points)
                 (if arg
-                    (grammarbot--issue-replace match 0)
-                  (grammarbot--issue-interactively match))))
+                    (grammarbot--issue-replace match-pnt 0)
+                  (grammarbot--issue-interactively match-pnt))))
           (grammarbot--issue-highlight nil))
 
       (message "GrammarBot v%s detected no errors"
