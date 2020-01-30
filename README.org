@@ -1,4 +1,4 @@
-# Created 2020-01-30 Чт 21:20
+# Created 2020-01-30 Чт 21:21
 #+TITLE: grammarbot
 #+AUTHOR: Zajcev Evgeny
 #+startup: showall
@@ -20,7 +20,6 @@ either buffer or active region.
 - User Option: ~grammarbot-language~
 
   Language to use.
-
   Default value: "en-US"
 
   Please note that only English is supported at the moment
