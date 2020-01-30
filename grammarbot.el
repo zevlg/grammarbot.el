@@ -51,16 +51,17 @@ Without API Key there is a limit up to 100 requests per day."
   :type 'face
   :group 'grammarbot)
 
-(defcustom grammarbot-max-replacements 10
-  "Maximum number of replacements to show.
-10 at maximum."
-  :type 'integer
-  :group 'grammarbot)
-
-(defcustom grammarbot-accept-single-choice
-  '((:issueType "grammar" :category "GRAMMAR"))
-  "List of issues to automatically accept if issue of given type."
+(defcustom grammarbot-accept-single-choice-rules nil
+  "List of rules for issues to automatically accept single choice replacement.
+Each match has `:rule' property.  If any of element in
+`grammarbot-accept-single-choice-rules' structurally matches
+`:rule' property of the match, then such match is automatically
+accepted.
+Examples of elements:
+  (:issueType \"grammar\" :category (:id \"GRAMMAR\"))
+    Automatically accept grammar errors."
   :type 'list
+  :options '(((:issueType "grammar" :category (:id "GRAMMAR"))))
   :group 'grammarbot)
 
 (defconst grammarbot-api-url "http://api.grammarbot.io/v2/check"
@@ -81,7 +82,7 @@ LANG, language of the TEXT, by default `grammarbot-language' is used."
       (json-read))))
 
 (defun grammarbot-issues-stat (results)
-  "Return issues statistics using RESULTS from `grammarbot--api-check',"
+  "Return issues statistics using RESULTS from `grammarbot--api-check',."
   (let ((matches (plist-get results :matches))
         (issues-alist nil))
     (seq-doseq (match matches)
@@ -109,7 +110,7 @@ LANG, language of the TEXT, by default `grammarbot-language' is used."
 
 ;; NOTE: `match-point' is cons in form (MARKER . MATCH)
 (defun grammarbot--issue-highlight (match-point)
-  "Highlight text corresponding to issue MATCH."
+  "Highlight text corresponding to MATCH-POINT issue."
   (if match-point
       (let* ((mstart (car match-point))
              (mend (+ mstart (plist-get (cdr match-point) :length))))
@@ -125,42 +126,51 @@ LANG, language of the TEXT, by default `grammarbot-language' is used."
       (delete-overlay grammarbot--overlay))))
 
 (defun grammarbot--choices-buffer (match-point)
-  "Create and fill choices buffer, return buffer."
-  (let ((match (cdr match-point)))
+  "Create choices buffer for issue for MATCH-POINT.
+Return the buffer."
+  (let ((match (cdr match-point))
+        (replacements (plist-get match :replacements)))
     (with-current-buffer (get-buffer-create grammarbot-choices-buffer)
       (erase-buffer)
-;      (insert (plist-get match :shortMessage) ": ")
       (insert (plist-get match :message) "\n")
       (let ((max-rlen (apply 'max (mapcar (lambda (rep)
                                             (length (plist-get rep :value)))
-                                          (plist-get match :replacements))))
-            (rep-idx 0))
-        (seq-doseq (rep (plist-get match :replacements))
-          (insert "(" (propertize (number-to-string rep-idx) 'face 'bold) ")")
+                                          replacements)))
+            (rep-idx ?0))
+        (seq-doseq (rep replacements)
+          (when (= rep-idx (+ ?9 1))
+            (setq rep-idx ?a))
+          (insert "(" (propertize (char-to-string rep-idx) 'face 'bold) ")")
           (insert " " (plist-get rep :value) " ")
           (insert (make-string (- max-rlen (length (plist-get rep :value))) ?\s))
+          (when (>= (current-column) fill-column)
+            (insert "\n"))
           (cl-incf rep-idx)))
       (goto-char (point-min))
       (current-buffer))))
 
 (defun grammarbot--keys-as-rep-idx (keys)
   "Convert KEYS to replacement index.
-Return digit or nil."
+Return nil or replacement index number."
   (let ((num-key (and (= (length keys) 1) (aref keys 0))))
-    (when (and (>= num-key ?0) (<= num-key ?9))
-      (- num-key ?0))))
+    (cond ((and (>= num-key ?0) (<= num-key ?9))
+           (- num-key ?0))
+          ((and (>= num-key ?a) (<= num-key ?z))
+           (+ 10 (- num-key ?a))))))
 
 (defun grammarbot--issue-choose (match-point)
   "Show/hide replacements candidates for MATCH-POINT.
 Return selected replacement index."
   (if match-point
       (let* ((nreps (length (plist-get (cdr match-point) :replacements)))
-             (read-prompt (concat (format "0%s to replace, "
-                                          (if (> nreps 1)
-                                              (format "-%d" nreps)
-                                            ""))
-                                  "SPC to leave unchanged, "
-                                  "C-g to cancel"))
+             (read-prompt
+              (concat (format "0%s to replace, "
+                              (cond ((< nreps 2) "")
+                                    ((< nreps 11) (format "-%d" (1- nreps)))
+                                    (t (concat "-" (char-to-string
+                                                    (+ nreps (- ?a 11)))))))
+                      "SPC to leave unchanged, "
+                      "C-g to cancel"))
              (got-valid-keys nil) (ret-rep-idx nil))
         (display-buffer (grammarbot--choices-buffer match-point)
                         grammarbot-choices-display-buffer-action)
@@ -196,10 +206,30 @@ Return selected replacement index."
   (when-let ((rep-idx (grammarbot--issue-choose match-point)))
     (grammarbot--issue-replace match-point rep-idx)))
 
+(defun grammarbot--plist-part-p (part plist)
+  "Return non-nil PART is the structural part of the PLIST."
+  (let ((part-alist (json--plist-to-alist part)))
+    (cl-every (lambda (part-elem)
+                (let ((part-val (cdr part-elem))
+                      (plist-val (plist-get plist (car part-elem))))
+                  (cond ((and (listp part-val) (listp plist-val))
+                         (grammarbot--plist-part-p part-val plist-val))
+                        (t (equal part-val plist-val)))))
+              part-alist)))
+
+(defun grammarbot--issue-accept-p (match-point)
+  "Return non-nil if MATCH-POINT should be automatically accepted.
+Only issues with single choice replacements are accepted.
+See `grammarbot-accept-single-choice-rules'."
+  (let ((match (cdr match-point)))
+    (and (= 1 (length (plist-get match :replacements)))
+         (cl-some (apply-partially grammarbot-accept-single-choice-rules)
+                  match))))
+
 ;;;###autoload
 (defun grammarbot (start end &optional arg)
   "Interactively check grammar for region or the buffer.
-If region is selected, then check region only.
+If region is selected, then check region only from START to END.
 Otherwise check whole buffer.
 If prefix ARG is given, then automatically replace issues with
 the first suggestion, i.e. grammarbot in batch mode."
@@ -222,7 +252,7 @@ the first suggestion, i.e. grammarbot in batch mode."
         (unwind-protect
             (save-excursion
               (seq-doseq (match-pnt match-points)
-                (if arg
+                (if (or arg (grammarbot--issue-accept-p match-pnt))
                     (grammarbot--issue-replace match-pnt 0)
                   (grammarbot--issue-interactively match-pnt))))
 
