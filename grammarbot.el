@@ -161,6 +161,9 @@ Return the buffer."
     (with-current-buffer (get-buffer-create grammarbot-choices-buffer)
       (erase-buffer)
       (insert (plist-get match :message) "\n")
+      (when (= 1 (length replacements))
+        (insert (format "Rule: %S\n" (plist-get match :rule))))
+      (insert "\n")
       (let ((max-rlen (apply 'max (mapcar (lambda (rep)
                                             (length (plist-get rep :value)))
                                           replacements)))
@@ -251,7 +254,9 @@ Only issues with single choice replacements are accepted.
 See `grammarbot-accept-single-choice-rules'."
   (let ((match (cdr match-point)))
     (and (= 1 (length (plist-get match :replacements)))
-         (cl-some (apply-partially grammarbot-accept-single-choice-rules)
+         grammarbot-accept-single-choice-rules
+         (cl-some (apply-partially 'grammarbot--plist-part-p
+                                   grammarbot-accept-single-choice-rules)
                   match))))
 
 ;;;###autoload
