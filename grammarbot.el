@@ -50,6 +50,7 @@
 ;; * Customizable Options
 ;; 
 ;; - User Option: ~grammarbot-language~
+;; 
 ;;   {{{vardoc1(grammarbot-language)}}}
 ;;
 ;;   Default value: {{{eval(grammarbot-language)}}}
@@ -63,9 +64,10 @@
   :group 'grammarbot)
 
 ;; - User Option: ~grammarbot-api-key~
+;; 
 ;;   {{{vardoc1(grammarbot-api-key)}}}
 (defcustom grammarbot-api-key nil
-  "*Your API Key uptained from http://grammarbot.io.
+  "*Your API Key obtained from http://grammarbot.io.
 Without API Key there is a limit up to 100 requests per day."
   :type 'string-or-null-p
   :group 'grammarbot)
@@ -76,6 +78,7 @@ Without API Key there is a limit up to 100 requests per day."
   :group 'grammarbot)
 
 ;; - User Option: ~grammarbot-accept-single-choice-rules~
+;; 
 ;;   {{{vardoc1(grammarbot-accept-single-choice-rules)}}}
 (defcustom grammarbot-accept-single-choice-rules nil
   "List of rules for issues to automatically accept single choice replacement.
