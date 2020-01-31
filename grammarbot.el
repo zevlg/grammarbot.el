@@ -25,6 +25,7 @@
 ;;; Commentary:
 
 ;; #+TITLE: grammarbot
+;; #+OPTIONS: timestamp:nil
 ;; #+STARTUP: showall
 ;;
 ;; #+BEGIN_QUOTE

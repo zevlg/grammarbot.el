@@ -1,4 +1,4 @@
-# Created 2020-01-30 Чт 21:21
+#+OPTIONS: timestamp:nil
 #+TITLE: grammarbot
 #+AUTHOR: Zajcev Evgeny
 #+startup: showall
@@ -12,7 +12,7 @@ Do not edit manually.
 =grammarbot.el= is GNU Emacs interface to wonderful
 [[https://www.grammarbot.io][GrammarBot]] service.
 
-There is only one command - M-x grammarbot RET to check
+There is only one command - @@html:<kbd>@@M-x grammarbot RET@@html:</kbd>@@ to check
 either buffer or active region.
 
 * Customizable Options
