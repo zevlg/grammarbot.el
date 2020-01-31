@@ -1,5 +1,5 @@
 #+OPTIONS: timestamp:nil
-#+TITLE: grammarbot
+#+TITLE: grammarbot.el
 #+AUTHOR: Zajcev Evgeny
 #+startup: showall
 
@@ -12,7 +12,8 @@ Do not edit manually.
 =grammarbot.el= is GNU Emacs interface to wonderful
 [[https://www.grammarbot.io][GrammarBot]] service.
 
-There is only one command - @@html:<kbd>@@M-x grammarbot RET@@html:</kbd>@@ to check
+=grammarbot.el= interface is similar to =ispell=.
+There is only one command @@html:<kbd>@@M-x grammarbot RET@@html:</kbd>@@ to check
 either buffer or active region.
 
 * Customizable Options

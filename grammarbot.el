@@ -24,7 +24,7 @@
 
 ;;; Commentary:
 
-;; #+TITLE: grammarbot
+;; #+TITLE: grammarbot.el
 ;; #+OPTIONS: timestamp:nil
 ;; #+STARTUP: showall
 ;;
@@ -37,7 +37,8 @@
 ;; =grammarbot.el= is GNU Emacs interface to wonderful
 ;; [[https://www.grammarbot.io][GrammarBot]] service.
 ;;
-;; There is only one command - {{{kbd(M-x grammarbot RET)}}} to check
+;; =grammarbot.el= interface is similar to =ispell=.
+;; There is only one command {{{kbd(M-x grammarbot RET)}}} to check
 ;; either buffer or active region.
 
 ;;; Code:
