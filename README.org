@@ -1,4 +1,4 @@
-#+OPTIONS: timestamp:nil
+#+OPTIONS: \n:t timestamp:nil
 #+TITLE: grammarbot.el
 #+AUTHOR: Zajcev Evgeny
 #+startup: showall

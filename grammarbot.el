@@ -24,8 +24,8 @@
 
 ;;; Commentary:
 
+;; #+OPTIONS: \n:t timestamp:nil
 ;; #+TITLE: grammarbot.el
-;; #+OPTIONS: timestamp:nil
 ;; #+STARTUP: showall
 ;;
 ;; #+BEGIN_QUOTE
@@ -118,8 +118,8 @@ Without API Key there is a limit up to 100 requests per day."
 ;;   automatically accept such issue and do the auto-replacement.  To
 ;;   do so, add:
 ;;   #+BEGIN_SRC emacs-lisp
-;;   (add-to-list 'grammarbot-accept-single-choice-rules
-;;                '(:issueType "typographical" :category (:id "PUNCTUATION")))
+;;     (add-to-list 'grammarbot-accept-single-choice-rules
+;;                  '(:issueType "typographical" :category (:id "PUNCTUATION")))
 ;;   #+END_SRC
 (defcustom grammarbot-accept-single-choice-rules nil
   "List of rules for issues to automatically accept single choice replacement.
