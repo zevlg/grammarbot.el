@@ -5,7 +5,8 @@
 ;; Author: Zajcev Evgeny <zevlg@yandex.ru>
 ;; Created: Tue Jan 28 15:17:19 2020
 ;; Keywords: dictionary, hypermedia
-;; Package-Requires: ((emacs "24") (cl-lib "0.5"))
+;; Package-Requires: ((emacs "25") (cl-lib "0.5"))
+;; URL: https://github.com/zevlg/grammarbot.el
 ;; Version: 1.0
 (defconst grammarbot-version "1.0")
 
@@ -331,8 +332,9 @@ See `grammarbot-ignore-single-choice-rules'."
                                    (plist-get match :rule))
                   grammarbot-ignore-single-choice-rules))))
 
-(defsubst grammarbot--stat-inc (stat which)
-  (plist-put stat which (1+ (plist-get stat which))))
+(defsubst grammarbot--stat-inc (stats which)
+  "Increase WHICH property in STATS plist by 1."
+  (plist-put stats which (1+ (plist-get stats which))))
 
 ;;;###autoload
 (defun grammarbot (start end &optional arg)
@@ -356,7 +358,7 @@ the first suggestion, i.e. grammarbot in batch mode."
                            (+ start (plist-get match :offset)) t)
                           match))
                   (plist-get result :matches)))
-         (stats '(:ignored 0 :replaced 0)))
+         (stats (list :ignored 0 :replaced 0)))
     (if match-points
         (unwind-protect
             (save-excursion
