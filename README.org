@@ -18,6 +18,9 @@ either buffer or active region.
 
 * Customizable Options
 
+You can customize =grammarbot.el= with @@html:<kbd>@@M-x customize-group RET grammarbot RET@@html:</kbd>@@ using Emacs [[https://www.gnu.org/software/emacs/manual/html_node/emacs/Easy-Customization.html#Easy-Customization][Easy Customization Interface]]
+
+Or just tweak following user options in your =init.el=:
 - User Option: ~grammarbot-language~
 
   Language to use.
@@ -26,6 +29,15 @@ either buffer or active region.
   Please note that only English is supported at the moment
   ("en-US" or "en-GB").
 
+- User Option: ~grammarbot-show-stats~, default: t
+
+  Non-nil to show statistics for all found issues after check.
+
+  Stats are shown in echo area with message like:
+  #+begin_example
+    Grammarbot issues: 2, ignored: 1, replaced: 1
+  #+end_example
+
 - User Option: ~grammarbot-api-key~
 
   Your API Key obtained from http://grammarbot.io.
@@ -33,3 +45,37 @@ either buffer or active region.
 - User Option: ~grammarbot-accept-single-choice-rules~
 
   List of rules for issues to automatically accept single choice replacement.
+
+  Consider we are checking next sentence with =grammarbot.el=:
+  #+begin_example
+    However it is wise to automatically accept single replacements
+  #+end_example
+
+  While checking, =*Grammarbot Choices*= buffer pops up for the issue:
+  #+begin_example
+    Did you forget a comma after a conjunctive/linking adverb?
+    Rule: (:id "SENT_START_CONJUNCTIVE_LINKING_ADVERB_COMMA" :subId "1" :description "Commas after conjunctive/linking adverbs in front of a new sentence." :issueType "typographical" :urls [(:value "https://writing.wisc.edu/Handbook/ConjAdv.html")] :category (:id "PUNCTUATION" :name "Punctuation"))
+
+    (0) However,
+  #+end_example
+
+  As you can see, issue has single replacement - "However,".  For
+  single replacement issues corresponding issue rule is shown.
+
+  You can customize ~grammarbot-accept-single-choice-rules~ to
+  automatically accept such issue and do the auto-replacement.  To
+  do so, add:
+  #+begin_src emacs-lisp
+    (add-to-list 'grammarbot-accept-single-choice-rules
+    	     '(:issueType "typographical" :category (:id "PUNCTUATION")))
+  #+end_src
+
+- User Option: ~grammarbot-ignore-single-choice-rules~
+
+  List of rules for issues to automatically ignore single choice replacement.
+
+  Elements of the list are in same format as fors
+  ~grammarbot-accept-single-choice-rules~.
+
+  By default "Whitespace repetition" and "Sentence starts with an
+  uppercase letter" issues are ignored.
