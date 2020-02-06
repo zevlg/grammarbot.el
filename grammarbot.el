@@ -297,7 +297,8 @@ Return non-nil if issue has been replaced with one of the replacements."
   (grammarbot--issue-highlight match-point)
 
   (when-let ((rep-idx (grammarbot--issue-choose match-point)))
-    (grammarbot--issue-replace match-point rep-idx)))
+    (grammarbot--issue-replace match-point rep-idx)
+    t))
 
 (defun grammarbot--plist-part-p (plist part)
   "Return non-nil PART is the structural part of the PLIST."
