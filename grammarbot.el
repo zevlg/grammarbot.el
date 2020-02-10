@@ -172,7 +172,7 @@ LANG, language of the TEXT, by default `grammarbot-language' is used."
       (json-read))))
 
 (defun grammarbot-issues-stat (results)
-  "Return issues statistics using RESULTS from `grammarbot--api-check',."
+  "Return issues statistics using RESULTS from `grammarbot--api-check'."
   (let ((matches (plist-get results :matches))
         (issues-alist nil))
     (seq-doseq (match matches)
