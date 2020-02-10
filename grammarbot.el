@@ -5,7 +5,7 @@
 ;; Author: Zajcev Evgeny <zevlg@yandex.ru>
 ;; Created: Tue Jan 28 15:17:19 2020
 ;; Keywords: dictionary, hypermedia
-;; Package-Requires: ((emacs "25") (cl-lib "0.5"))
+;; Package-Requires: ((emacs "25.1") (cl-lib "0.5"))
 ;; URL: https://github.com/zevlg/grammarbot.el
 ;; Version: 1.0
 (defconst grammarbot-version "1.0")
@@ -43,6 +43,7 @@
 ;; either buffer or active region.
 
 ;;; Code:
+(require 'subr-x)
 (require 'json)
 
 (defgroup grammarbot nil
@@ -153,7 +154,7 @@ Elements are same as for `grammarbot-accept-single-choice-rules'."
   :group 'grammarbot)
 
 
-(defconst grammarbot-api-url "http://api.grammarbot.io/v2/check"
+(defconst grammarbot-api-url "https://api.grammarbot.io/v2/check"
   "API URL to grammarbot service.")
 
 (defun grammarbot--api-check (text api-key lang)
@@ -225,9 +226,9 @@ Return the buffer."
       (when (= 1 (length replacements))
         (insert (format "Rule: %S\n" (plist-get match :rule))))
       (insert "\n")
-      (let ((max-rlen (apply 'max (mapcar (lambda (rep)
-                                            (length (plist-get rep :value)))
-                                          replacements)))
+      (let ((max-rlen (apply #'max (mapcar (lambda (rep)
+                                             (length (plist-get rep :value)))
+                                           replacements)))
             (rep-idx ?0))
         (seq-doseq (rep replacements)
           (when (= rep-idx (+ ?9 1))
@@ -318,7 +319,7 @@ See `grammarbot-accept-single-choice-rules'."
   (let ((match (cdr match-point)))
     (and (= 1 (length (plist-get match :replacements)))
          grammarbot-accept-single-choice-rules
-         (cl-some (apply-partially 'grammarbot--plist-part-p
+         (cl-some (apply-partially #'grammarbot--plist-part-p
                                    (plist-get match :rule))
                   grammarbot-accept-single-choice-rules))))
 
@@ -329,7 +330,7 @@ See `grammarbot-ignore-single-choice-rules'."
   (let ((match (cdr match-point)))
     (and (< (length (plist-get match :replacements)) 2)
          grammarbot-ignore-single-choice-rules
-         (cl-some (apply-partially 'grammarbot--plist-part-p
+         (cl-some (apply-partially #'grammarbot--plist-part-p
                                    (plist-get match :rule))
                   grammarbot-ignore-single-choice-rules))))
 
