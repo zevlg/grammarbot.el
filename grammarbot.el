@@ -5,7 +5,7 @@
 ;; Author: Zajcev Evgeny <zevlg@yandex.ru>
 ;; Created: Tue Jan 28 15:17:19 2020
 ;; Keywords: dictionary, hypermedia
-;; Package-Requires: ((emacs "25.1") (cl-lib "0.5"))
+;; Package-Requires: ((emacs "25.1"))
 ;; URL: https://github.com/zevlg/grammarbot.el
 ;; Version: 1.0
 (defconst grammarbot-version "1.0")
